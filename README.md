@@ -1,0 +1,2 @@
+# botkube-plugins
+🔌 Botkube plugins
