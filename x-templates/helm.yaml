@@ -1,0 +1,17 @@
+interactive:
+  - command:
+      prefix: "helm list"
+      parser: "table"
+    message:
+      select:
+        name: "Release"
+        itemKey: "{{ .Namespace }}/{{ .Name }}"
+      actions:
+        notes:  "helm get notes {{ .Name }} -n {{ .Namespace }}"
+        delete: "helm delete    {{ .Name }} -n {{ .Namespace }}"
+      preview: |
+        Name:        {{ .Name }}
+        Namespace:   {{ .Namespace }}
+        Status:      {{ .Status }}
+        Chart:       {{ .Chart }}
+
