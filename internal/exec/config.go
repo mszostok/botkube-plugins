@@ -6,9 +6,20 @@ import (
 
 type (
 	Config struct {
-		Interactive []Interactive `yaml:"interactive"`
+		Interactive InteractiveSources `yaml:"interactive"`
 	}
+	InteractiveSources struct {
+		Templates []Template `yaml:"templates"`
+	}
+
+	Template struct {
+		Ref string `yaml:"ref"`
+	}
+
 	Interactive struct {
+		Interactive []InteractiveItem `yaml:"interactive"`
+	}
+	InteractiveItem struct {
 		Message Message            `yaml:"message"`
 		Command InteractiveCommand `yaml:"command"`
 	}
@@ -32,12 +43,12 @@ type (
 	}
 )
 
-func (e Config) GetInteractiveConfig(cmd string) (Interactive, bool) {
+func (e Interactive) FindWithPrefix(cmd string) (InteractiveItem, bool) {
 	for _, item := range e.Interactive {
 		if strings.HasPrefix(cmd, item.Command.Prefix) {
 			return item, true
 		}
 	}
 
-	return Interactive{}, false
+	return InteractiveItem{}, false
 }

@@ -8,5 +8,5 @@ import (
 
 // Parser describes API for command output parsers.
 type Parser interface {
-	Parse(executedCmd string, output string, msgCtx exec.Interactive) (api.Message, error)
+	Parse(executedCmd string, output string, msgCtx exec.InteractiveItem) (api.Message, error)
 }

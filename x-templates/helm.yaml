@@ -15,3 +15,26 @@ interactive:
         Status:      {{ .Status }}
         Chart:       {{ .Chart }}
 
+#
+#  - command:
+#      prefix: "helm show"
+#      parser: "table"
+#    message:
+#      selects:
+#        - name: "Release"
+#          itemKey: "{{ .Namespace }}/{{ .Name }}"
+#          source: "helm list -A"
+#          onItemSelect:
+#            - name: "Version"
+#              itemKey: "{{ .REVISION }}"
+#              source: "helm history {{ .Value }}"
+#
+#      actions:
+#        run:  "helm rollback {{ .Name }} -n {{ .Namespace }} --version {{ .Version}}"
+#        delete: "helm delete    {{ .Name }} -n {{ .Namespace }}"
+#      preview: |
+#        Name:        {{ .Name }}
+#        Namespace:   {{ .Namespace }}
+#        Status:      {{ .Status }}
+#        Chart:       {{ .Chart }}
+#

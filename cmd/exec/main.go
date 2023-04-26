@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -17,10 +21,12 @@ import (
 	"github.com/kubeshop/botkube/pkg/api/executor"
 	"github.com/kubeshop/botkube/pkg/pluginx"
 	"github.com/mattn/go-shellwords"
+	"gopkg.in/yaml.v3"
 
 	x "go.szostok.io/botkube-plugins/internal/exec"
 	"go.szostok.io/botkube-plugins/internal/exec/output"
 	"go.szostok.io/botkube-plugins/internal/formatx"
+	"go.szostok.io/botkube-plugins/internal/getter"
 )
 
 // version is set via ldflags by GoReleaser.
@@ -88,7 +94,7 @@ func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput)
 	switch {
 	case cmd.Run != nil:
 		tool := formatx.Normalize(strings.Join(cmd.Run.Tool, " "))
-		return run(in.Configs, tool)
+		return run(ctx, in.Configs, tool)
 	case cmd.Install != nil:
 		tool := formatx.Normalize(strings.Join(cmd.Install.Tool, " "))
 		return install(tool)
@@ -155,7 +161,14 @@ func runCmdTool(in string) (string, error) {
 	return string(out), err
 }
 
-func run(cfgs []*executor.Config, tool string) (executor.ExecuteOutput, error) {
+var hasher = sha256.New()
+
+func sha(in string) string {
+	hasher.Reset()
+	hasher.Write([]byte(in))
+	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+}
+func run(ctx context.Context, cfgs []*executor.Config, tool string) (executor.ExecuteOutput, error) {
 	var cfg x.Config
 	err := pluginx.MergeExecutorConfigs(cfgs, &cfg)
 	if err != nil {
@@ -176,7 +189,41 @@ func run(cfgs []*executor.Config, tool string) (executor.ExecuteOutput, error) {
 		}, nil
 	}
 
-	interactivityConfig, found := cfg.GetInteractiveConfig(cmd.ToExecute)
+	for _, tpl := range cfg.Interactive.Templates {
+		err := getter.Download(ctx, tpl.Ref, filepath.Join("tmp", "x-templates", sha(tpl.Ref)))
+		if err != nil {
+			return executor.ExecuteOutput{}, err
+		}
+	}
+
+	var interactiveTemplates x.Interactive
+	err = filepath.WalkDir(filepath.Join("tmp", "x-templates"), func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		fmt.Println(filepath.Ext(d.Name()))
+		if filepath.Ext(d.Name()) != "yaml" {
+			return nil
+		}
+
+		file, err := os.ReadFile(d.Name())
+		if err != nil {
+			return err
+		}
+
+		var cfg x.Interactive
+		err = yaml.Unmarshal(file, &cfg)
+		if err != nil {
+			return err
+		}
+		interactiveTemplates.Interactive = append(interactiveTemplates.Interactive, cfg.Interactive...)
+		return nil
+	})
+	if err != nil {
+		return executor.ExecuteOutput{}, err
+	}
+
+	interactivityConfig, found := interactiveTemplates.FindWithPrefix(cmd.ToExecute)
 	if !found {
 		return executor.ExecuteOutput{
 			Message: api.NewCodeBlockMessage(out, true),

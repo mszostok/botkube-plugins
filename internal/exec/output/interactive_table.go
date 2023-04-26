@@ -14,7 +14,7 @@ import (
 
 type InteractiveTable struct{}
 
-func (p InteractiveTable) Parse(cmd string, output string, msgCtx exec.Interactive) (api.Message, error) {
+func (p InteractiveTable) Parse(cmd string, output string, msgCtx exec.InteractiveItem) (api.Message, error) {
 	table, lines := parser.TableSpaceSeparated(output)
 	if len(lines) == 0 {
 		return noItemsMsg(), nil
@@ -55,7 +55,7 @@ func (p InteractiveTable) Parse(cmd string, output string, msgCtx exec.Interacti
 	}, nil
 }
 
-func renderActions(msgCtx exec.Interactive, table [][]string, cmd string, idx int) (api.Section, error) {
+func renderActions(msgCtx exec.InteractiveItem, table [][]string, cmd string, idx int) (api.Section, error) {
 	headers, firstRow := table[0], table[idx+1]
 
 	btnBuilder := api.NewMessageButtonBuilder()
@@ -96,7 +96,7 @@ func renderActions(msgCtx exec.Interactive, table [][]string, cmd string, idx in
 	}, nil
 }
 
-func renderPreview(msgCtx exec.Interactive, table [][]string, lines []string, idx int) (api.Section, error) {
+func renderPreview(msgCtx exec.InteractiveItem, table [][]string, lines []string, idx int) (api.Section, error) {
 	headers, renderRow := table[0], table[1]
 	renderLine := lines[1]
 
@@ -126,7 +126,7 @@ func renderPreview(msgCtx exec.Interactive, table [][]string, lines []string, id
 	}, nil
 }
 
-func renderDropdowns(msgCtx exec.Interactive, table [][]string, cmd string, idx int) (api.Section, error) {
+func renderDropdowns(msgCtx exec.InteractiveItem, table [][]string, cmd string, idx int) (api.Section, error) {
 	headers, rows := table[0], table[1:]
 
 	var dropdowns []api.Select

@@ -6,7 +6,7 @@ import (
 	"go.szostok.io/botkube-plugins/internal/exec"
 )
 
-func BuildMessage(cmd, output string, msgCtx exec.Interactive) (api.Message, error) {
+func BuildMessage(cmd, output string, msgCtx exec.InteractiveItem) (api.Message, error) {
 	var parser Parser
 	switch msgCtx.Command.Parser {
 	case "table":
