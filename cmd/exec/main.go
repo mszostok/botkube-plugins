@@ -2,15 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
-	"io/fs"
-	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,13 +13,11 @@ import (
 	"github.com/kubeshop/botkube/pkg/api"
 	"github.com/kubeshop/botkube/pkg/api/executor"
 	"github.com/kubeshop/botkube/pkg/pluginx"
-	"github.com/mattn/go-shellwords"
-	"gopkg.in/yaml.v3"
 
 	x "go.szostok.io/botkube-plugins/internal/exec"
 	"go.szostok.io/botkube-plugins/internal/exec/output"
+	"go.szostok.io/botkube-plugins/internal/exec/template"
 	"go.szostok.io/botkube-plugins/internal/formatx"
-	"go.szostok.io/botkube-plugins/internal/getter"
 )
 
 // version is set via ldflags by GoReleaser.
@@ -34,7 +25,17 @@ var version = "dev"
 
 const (
 	pluginName = "x"
+	binaryName = "eget"
 )
+
+var egetBinaryDownloadLinks = map[string]string{
+	"windows/amd64": "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-windows_amd64.zip//eget-1.3.3-windows_amd64",
+	"darwin/amd64":  "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-darwin_amd64.tar.gz//eget-1.3.3-darwin_amd64",
+	"darwin/arm64":  "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-darwin_arm64.tar.gz//eget-1.3.3-darwin_arm64",
+	"linux/amd64":   "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-linux_amd64.tar.gz//eget-1.3.3-linux_amd64",
+	"linux/arm64":   "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-linux_arm64.tar.gz//eget-1.3.3-linux_arm64",
+	"linux/386":     "https://github.com/zyedidia/eget/releases/download/v1.3.3/eget-1.3.3-linux_386.tar.gz//eget-1.3.3-linux_386",
+}
 
 // InstallExecutor implements Botkube executor plugin.
 type InstallExecutor struct{}
@@ -59,6 +60,11 @@ func (*InstallExecutor) Metadata(context.Context) (api.MetadataOutput, error) {
 	return api.MetadataOutput{
 		Version:     "v1.0.0",
 		Description: "Runs installed binaries",
+		Dependencies: map[string]api.Dependency{
+			binaryName: {
+				URLs: egetBinaryDownloadLinks,
+			},
+		},
 	}, nil
 }
 
@@ -97,11 +103,31 @@ func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput)
 		return run(ctx, in.Configs, tool)
 	case cmd.Install != nil:
 		tool := formatx.Normalize(strings.Join(cmd.Install.Tool, " "))
-		return install(tool)
+		fmt.Println("in tool", tool)
+
+		dir, _ := getInstallDirectory()
+		cmd := fmt.Sprintf("eget --to=%s %s ", dir, tool)
+		_, err := pluginx.ExecuteCommand(ctx, cmd)
+		if err != nil {
+			return executor.ExecuteOutput{}, err
+		}
+
+		return executor.ExecuteOutput{
+			Message: api.NewPlaintextMessage("Binary was installed successfully", false),
+		}, nil
 	}
 	return executor.ExecuteOutput{
 		Message: api.NewPlaintextMessage("Command not supported", false),
 	}, nil
+}
+
+func getInstallDirectory() (string, bool) {
+	depDir := os.Getenv("PLUGIN_DEPENDENCY_DIR")
+	if depDir != "" {
+		return depDir, false
+	}
+
+	return "/tmp/bin", true
 }
 
 func escapePositionals(in string) string {
@@ -114,60 +140,6 @@ func escapePositionals(in string) string {
 	return in
 }
 
-func install(tool string) (executor.ExecuteOutput, error) {
-	fmt.Println("in tool", tool)
-	cmd := fmt.Sprintf("/tmp/bin/eget --to=/tmp/bin %s ", tool)
-	fmt.Printf("running %s\n", cmd)
-	err := os.MkdirAll("/tmp/bin", 0o777)
-	if err != nil {
-		log.Println("while creating it", err)
-		return executor.ExecuteOutput{}, err
-	}
-
-	out, err := runCmdInstall(fmt.Sprintf("wget -O /tmp/bin/eget https://github.com/mszostok/botkube/releases/download/v0.66.0/eget-%s", runtime.GOOS))
-	if err != nil {
-		log.Println("while downloading it", out, err)
-		return executor.ExecuteOutput{}, err
-	}
-
-	out, err = runCmdInstall("chmod +x /tmp/bin/eget")
-	if err != nil {
-		log.Println("while changing mod", out, err)
-		return executor.ExecuteOutput{}, err
-	}
-
-	out, err = runCmdTool(cmd)
-	if err != nil {
-		log.Println("while running mod", out, err)
-		return executor.ExecuteOutput{}, err
-	}
-
-	return executor.ExecuteOutput{
-		Message: api.NewPlaintextMessage("Installed successfully", false),
-	}, nil
-}
-
-func runCmdTool(in string) (string, error) {
-	args, err := shellwords.Parse(in)
-	if err != nil {
-		return "", err
-	}
-
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "PATH=$PATH:/tmp/bin")
-
-	out, err := cmd.CombinedOutput()
-	return string(out), err
-}
-
-var hasher = sha256.New()
-
-func sha(in string) string {
-	hasher.Reset()
-	hasher.Write([]byte(in))
-	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-}
 func run(ctx context.Context, cfgs []*executor.Config, tool string) (executor.ExecuteOutput, error) {
 	var cfg x.Config
 	err := pluginx.MergeExecutorConfigs(cfgs, &cfg)
@@ -176,11 +148,9 @@ func run(ctx context.Context, cfgs []*executor.Config, tool string) (executor.Ex
 	}
 
 	cmd := x.Parse(tool)
-	out, err := runCmd(cmd.ToExecute)
+	out, err := runCmd(ctx, cmd.ToExecute)
 	if err != nil {
-		return executor.ExecuteOutput{
-			Message: api.NewCodeBlockMessage(fmt.Sprintf("%s\n%s", out, err.Error()), false),
-		}, nil
+		return executor.ExecuteOutput{}, err
 	}
 
 	if cmd.IsRawRequired {
@@ -189,41 +159,12 @@ func run(ctx context.Context, cfgs []*executor.Config, tool string) (executor.Ex
 		}, nil
 	}
 
-	for _, tpl := range cfg.Interactive.Templates {
-		err := getter.Download(ctx, tpl.Ref, filepath.Join("tmp", "x-templates", sha(tpl.Ref)))
-		if err != nil {
-			return executor.ExecuteOutput{}, err
-		}
-	}
-
-	var interactiveTemplates x.Interactive
-	err = filepath.WalkDir(filepath.Join("tmp", "x-templates"), func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-		fmt.Println(filepath.Ext(d.Name()))
-		if filepath.Ext(d.Name()) != "yaml" {
-			return nil
-		}
-
-		file, err := os.ReadFile(d.Name())
-		if err != nil {
-			return err
-		}
-
-		var cfg x.Interactive
-		err = yaml.Unmarshal(file, &cfg)
-		if err != nil {
-			return err
-		}
-		interactiveTemplates.Interactive = append(interactiveTemplates.Interactive, cfg.Interactive...)
-		return nil
-	})
+	interactiveTpls, err := template.Load(ctx, cfg.Interactive.Templates)
 	if err != nil {
 		return executor.ExecuteOutput{}, err
 	}
 
-	interactivityConfig, found := interactiveTemplates.FindWithPrefix(cmd.ToExecute)
+	interactivityConfig, found := interactiveTpls.FindWithPrefix(cmd.ToExecute)
 	if !found {
 		return executor.ExecuteOutput{
 			Message: api.NewCodeBlockMessage(out, true),
@@ -252,25 +193,14 @@ func main() {
 	})
 }
 
-func runCmd(in string) (string, error) {
-	args, err := shellwords.Parse(in)
+func runCmd(ctx context.Context, in string) (string, error) {
+	dir, custom := getInstallDirectory()
+	if custom {
+		in = fmt.Sprintf("%s/%s", dir, in)
+	}
+	out, err := pluginx.ExecuteCommand(ctx, in)
 	if err != nil {
 		return "", err
 	}
-
-	cmd := exec.Command(fmt.Sprintf("/tmp/bin/%s", args[0]), args[1:]...)
-	fmt.Println(cmd.String())
-	out, err := cmd.CombinedOutput()
-	return color.ClearCode(string(out)), err
-}
-
-func runCmdInstall(in string) (string, error) {
-	args, err := shellwords.Parse(in)
-	if err != nil {
-		return "", err
-	}
-
-	cmd := exec.Command(args[0], args[1:]...)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
+	return color.ClearCode(out), nil
 }

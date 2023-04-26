@@ -3,18 +3,19 @@ package output
 import (
 	"fmt"
 	"strings"
-	"text/template"
+	gotemplate "text/template"
 
 	"github.com/huandu/xstrings"
 	"github.com/kubeshop/botkube/pkg/api"
 
 	"go.szostok.io/botkube-plugins/internal/exec"
 	"go.szostok.io/botkube-plugins/internal/exec/parser"
+	"go.szostok.io/botkube-plugins/internal/exec/template"
 )
 
 type InteractiveTable struct{}
 
-func (p InteractiveTable) Parse(cmd string, output string, msgCtx exec.InteractiveItem) (api.Message, error) {
+func (p InteractiveTable) Parse(cmd string, output string, msgCtx template.Interactive) (api.Message, error) {
 	table, lines := parser.TableSpaceSeparated(output)
 	if len(lines) == 0 {
 		return noItemsMsg(), nil
@@ -55,7 +56,7 @@ func (p InteractiveTable) Parse(cmd string, output string, msgCtx exec.Interacti
 	}, nil
 }
 
-func renderActions(msgCtx exec.InteractiveItem, table [][]string, cmd string, idx int) (api.Section, error) {
+func renderActions(msgCtx template.Interactive, table [][]string, cmd string, idx int) (api.Section, error) {
 	headers, firstRow := table[0], table[idx+1]
 
 	btnBuilder := api.NewMessageButtonBuilder()
@@ -96,7 +97,7 @@ func renderActions(msgCtx exec.InteractiveItem, table [][]string, cmd string, id
 	}, nil
 }
 
-func renderPreview(msgCtx exec.InteractiveItem, table [][]string, lines []string, idx int) (api.Section, error) {
+func renderPreview(msgCtx template.Interactive, table [][]string, lines []string, idx int) (api.Section, error) {
 	headers, renderRow := table[0], table[1]
 	renderLine := lines[1]
 
@@ -126,7 +127,7 @@ func renderPreview(msgCtx exec.InteractiveItem, table [][]string, lines []string
 	}, nil
 }
 
-func renderDropdowns(msgCtx exec.InteractiveItem, table [][]string, cmd string, idx int) (api.Section, error) {
+func renderDropdowns(msgCtx template.Interactive, table [][]string, cmd string, idx int) (api.Section, error) {
 	headers, rows := table[0], table[1:]
 
 	var dropdowns []api.Select
@@ -171,7 +172,7 @@ func render(tpl string, cols []string, rows []string) (string, error) {
 		data[col] = rows[idx]
 	}
 
-	tmpl, err := template.New("tpl").Parse(tpl)
+	tmpl, err := gotemplate.New("tpl").Parse(tpl)
 	if err != nil {
 		return "", err
 	}

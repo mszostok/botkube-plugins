@@ -17,12 +17,11 @@ func Download(ctx context.Context, src string, dst string) error {
 
 	// Build the client
 	client := &getter.Client{
-		Ctx:              ctx,
-		Src:              src,
-		Dst:              dst,
-		Pwd:              pwd,
-		Mode:             getter.ClientModeDir,
-		ProgressListener: defaultProgressBar,
+		Ctx:  ctx,
+		Src:  src,
+		Dst:  dst,
+		Pwd:  pwd,
+		Mode: getter.ClientModeDir,
 	}
 
 	return client.Get()
