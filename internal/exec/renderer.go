@@ -14,7 +14,7 @@ import (
 // Render is an interface that knows how to render a given command output.
 type Render interface {
 	// RenderMessage receives command output and a template and produce a final message.
-	RenderMessage(cmd, output string, msgCtx *template.Interactive) (api.Message, error)
+	RenderMessage(cmd, output string, msgCtx *template.Templates) (api.Message, error)
 }
 
 // Renderer provides functionality to render command output in requested format.
