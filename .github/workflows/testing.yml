@@ -33,3 +33,6 @@ jobs:
           cache: true
       - name: "Check code quality"
         uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout=5m
+

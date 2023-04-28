@@ -82,7 +82,7 @@ func renderActions(msgCtx *template.Interactive, table parser.Table, cmd string,
 
 	return api.Section{
 		Buttons: []api.Button{
-			btnBuilder.ForCommandWithoutDesc("Raw output", fmt.Sprintf("x run %s %s", cmd, exec.NoProcessingIndicator)),
+			btnBuilder.ForCommandWithoutDesc("Raw output", fmt.Sprintf("x run %s %s", cmd, exec.RawOutputIndicator)),
 		},
 		Selects: api.Selects{
 			Items: []api.Select{
