@@ -9,6 +9,8 @@ import (
 	"go.szostok.io/botkube-plugins/internal/ptr"
 )
 
+var compiledRegex = regexp.MustCompile(fmt.Sprintf(`%s:(\d+)`, SelectIndexIndicator))
+
 const (
 	NoProcessingIndicator = "@no-interactivity"
 	SelectIndexIndicator  = "@idx"
@@ -29,21 +31,19 @@ func Parse(cmd string) Command {
 		out.IsRawRequired = true
 	}
 
-	out.ToExecute, out.SelectIndex = getItemIdx(out.ToExecute)
+	out.ToExecute, out.SelectIndex = separateItemIdxAndCommand(out.ToExecute)
 	out.ToExecute = strings.TrimSpace(out.ToExecute)
 
 	return out
 }
 
-var compiledRegex = regexp.MustCompile(fmt.Sprintf(`%s:(\d+)`, SelectIndexIndicator))
-
-func getItemIdx(in string) (string, *int) {
-	matched := compiledRegex.FindStringSubmatch(in)
+func separateItemIdxAndCommand(cmd string) (cmdToExecute string, idx *int) {
+	matched := compiledRegex.FindStringSubmatch(cmd)
 	if len(matched) == 2 {
-		in = strings.Replace(in, matched[0], "", 1)
+		cmd = strings.Replace(cmd, matched[0], "", 1)
 		val, _ := strconv.Atoi(matched[1])
-		return in, ptr.FromType(val)
+		return cmd, ptr.FromType(val)
 	}
 
-	return in, nil
+	return cmd, nil
 }

@@ -2,6 +2,10 @@ package template
 
 import "strings"
 
+type Source struct {
+	Ref string `yaml:"ref"`
+}
+
 type (
 	Config struct {
 		Interactive []Interactive `yaml:"interactive"`

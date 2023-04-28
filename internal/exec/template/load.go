@@ -2,18 +2,15 @@ package template
 
 import (
 	"context"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-
-	"go.szostok.io/botkube-plugins/internal/exec"
 )
 
-func Load(ctx context.Context, templateSources []exec.Template) (Config, error) {
-	dir := filepath.Join("/tmp", "x-templates")
+func Load(ctx context.Context, tmpDir string, templateSources []Source) (Config, error) {
+	dir := filepath.Join(tmpDir, "x-templates")
 	err := EnsureDownloaded(ctx, templateSources, dir)
 	if err != nil {
 		return Config{}, err
@@ -21,10 +18,13 @@ func Load(ctx context.Context, templateSources []exec.Template) (Config, error) 
 
 	var config Config
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.IsDir() {
 			return nil
 		}
-		fmt.Println(filepath.Ext(d.Name()))
+
 		if filepath.Ext(d.Name()) != ".yaml" {
 			return nil
 		}

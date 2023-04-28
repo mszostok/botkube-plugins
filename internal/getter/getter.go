@@ -9,7 +9,7 @@ import (
 )
 
 // Download downloads data from a given source to local file system under a given destination path.
-func Download(ctx context.Context, src string, dst string) error {
+func Download(ctx context.Context, src, dst string) error {
 	pwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("while getting current dir: %w", err)

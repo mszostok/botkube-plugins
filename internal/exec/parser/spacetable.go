@@ -6,57 +6,68 @@ import (
 	"unicode"
 )
 
+type Table struct {
+	Headers []string
+	Rows    [][]string
+}
+
+type TableSpaceSeparatedOutput struct {
+	Table Table
+	Lines []string
+}
+
 // TableSpaceSeparated takes a string input and returns a slice of slices containing the separated values in each row
 // and a slice of the original input lines.
-func TableSpaceSeparated(in string) ([][]string, []string) {
-	var lines []string
-	sc := bufio.NewScanner(strings.NewReader(in))
-	for sc.Scan() {
-		txt := sc.Text()
-		if len(txt) <= 0 {
-			continue
-		}
-		lines = append(lines, txt)
+func TableSpaceSeparated(in string) TableSpaceSeparatedOutput {
+	var out TableSpaceSeparatedOutput
+	in = replaceTabsWithSpaces(in)
+	scanner := bufio.NewScanner(strings.NewReader(in))
+
+	// Parse the headers
+	var separators []int
+	if scanner.Scan() {
+		line := scanner.Text()
+		separators = getSeparators(line)
+		out.Lines = append(out.Lines, line)
+		out.Table.Headers = splitIntoCells(line, separators)
 	}
+	// Parse the rows
+	for scanner.Scan() {
+		line := scanner.Text()
+		out.Lines = append(out.Lines, line)
 
-	// get separators from the first line
-	separators := getSeparators(lines[0])
-
-	var out [][]string
-	for _, line := range lines {
-		out = append(out, getCells(line, separators))
+		row := splitIntoCells(line, separators)
+		out.Table.Rows = append(out.Table.Rows, row)
 	}
+	return out
+}
 
-	return out, lines
+func replaceTabsWithSpaces(in string) string {
+	return strings.ReplaceAll(in, "\t", "  ")
 }
 
 // function takes a line and returns a list of separators (positions of left edges of the cells)
 func getSeparators(line string) []int {
 	var separators []int
 	for idx, ch := range line {
-		cur := unicode.IsSpace(ch)
-		if !cur { // not separator
+		isCurrentCharSpace := unicode.IsSpace(ch)
+		if !isCurrentCharSpace { // not separator
 			continue
 		}
 
-		prevv := idx - 1
-		if prevv < 0 {
-			prevv = 0
-		}
+		var (
+			previousIdx = decreaseWithMin(idx, 0)
+			nextIdx     = increaseWithMax(idx, len(line))
 
-		nextx := idx + 1
-		if nextx >= len(line) {
-			nextx = len(line)
-		}
+			isNextSpace  = unicode.IsSpace(rune(line[nextIdx]))
+			wasPrevSpace = unicode.IsSpace(rune(line[previousIdx]))
+		)
 
-		next := unicode.IsSpace(rune(line[nextx]))
-		prev := unicode.IsSpace(rune(line[prevv]))
-
-		if cur && next {
+		if isCurrentCharSpace && isNextSpace {
 			continue
 		}
 
-		if cur && !prev && !next {
+		if isCurrentCharSpace && !wasPrevSpace && !isNextSpace { // check for multi world colum name like "APP VERSION"
 			continue
 		}
 		separators = append(separators, idx)
@@ -64,10 +75,30 @@ func getSeparators(line string) []int {
 	return separators
 }
 
+func increaseWithMax(in, max int) int {
+	in++
+	if in > max {
+		return max
+	}
+	return in
+}
+
+func decreaseWithMin(in, min int) int {
+	in--
+	if in < min {
+		return min
+	}
+	return in
+}
+
 // function takes a line and a list of separators and returns a list of cells (the line divided by the separators)
-func getCells(line string, separators []int) []string {
-	var res []string
-	start := 0
+func splitIntoCells(line string, separators []int) []string {
+	var (
+		res   []string
+		start = 0
+	)
+
+	separators = append(separators, len(line)) // to add the final "end", otherwise the last 'cell' won't be extracted
 	for _, end := range separators {
 		if end > len(line) {
 			end = len(line)
@@ -76,5 +107,6 @@ func getCells(line string, separators []int) []string {
 		start = end
 		res = append(res, cell)
 	}
+
 	return res
 }

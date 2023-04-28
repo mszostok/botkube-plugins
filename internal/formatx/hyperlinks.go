@@ -7,7 +7,7 @@ import (
 	"github.com/kubeshop/botkube/pkg/formatx"
 )
 
-var compiledRegex = regexp.MustCompile(`<(https?:\/\/[a-z.0-9\/\-_=]*)>`)
+var compiledRegex = regexp.MustCompile(`<(https?://[a-z.0-9/\-_=]*)>`)
 
 // RemoveHyperLinks removes the hyperlink text from url.
 func RemoveHyperLinks(in string) string {
