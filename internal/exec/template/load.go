@@ -39,7 +39,7 @@ func Load(ctx context.Context, tmpDir string, templateSources []Source) (Config,
 		if err != nil {
 			return err
 		}
-		config.Interactive = append(config.Interactive, cfg.Interactive...)
+		config.Templates = append(config.Templates, cfg.Templates...)
 		return nil
 	})
 	if err != nil {

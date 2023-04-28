@@ -19,7 +19,7 @@ func NewInteractiveTableMesage() *InteractiveMessage {
 	return &InteractiveMessage{}
 }
 
-func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.Interactive) (api.Message, error) {
+func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.Templates) (api.Message, error) {
 	out := parser.TableSpaceSeparated(output)
 	if len(out.Lines) == 0 {
 		return noItemsMsg(), nil
@@ -60,7 +60,7 @@ func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.I
 	}, nil
 }
 
-func renderActions(msgCtx *template.Interactive, table parser.Table, cmd string, idx int) (api.Section, error) {
+func renderActions(msgCtx *template.Templates, table parser.Table, cmd string, idx int) (api.Section, error) {
 	if idx >= len(table.Rows) {
 		idx = len(table.Rows) - 1
 	}
@@ -102,7 +102,7 @@ func renderActions(msgCtx *template.Interactive, table parser.Table, cmd string,
 	}, nil
 }
 
-func renderPreview(msgCtx *template.Interactive, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
+func renderPreview(msgCtx *template.Templates, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
 	headerLine := out.Lines[0]
 
 	if requestedRow >= len(out.Table.Rows) {
@@ -143,7 +143,7 @@ func getPreviewLine(lines []string, idx int) string {
 	return lines[1] // otherwise default first line
 }
 
-func renderDropdowns(msgCtx *template.Interactive, table parser.Table, cmd string, idx int) (api.Section, error) {
+func renderDropdowns(msgCtx *template.Templates, table parser.Table, cmd string, idx int) (api.Section, error) {
 	var dropdowns []api.Select
 	parent := api.Select{
 		Type:    api.StaticSelect,

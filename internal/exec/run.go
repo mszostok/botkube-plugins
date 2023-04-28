@@ -49,7 +49,7 @@ func (i *Runner) Run(ctx context.Context, cfg Config, tool string) (executor.Exe
 
 	cmdTemplate, found := templates.FindWithPrefix(cmd.ToExecute)
 	if !found {
-		i.log.Info("Interactive config not found for command")
+		i.log.Info("Templates config not found for command")
 		return executor.ExecuteOutput{
 			Message: api.NewCodeBlockMessage(out, true),
 		}, nil
