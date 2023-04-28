@@ -12,8 +12,8 @@ import (
 var compiledRegex = regexp.MustCompile(fmt.Sprintf(`%s:(\d+)`, SelectIndexIndicator))
 
 const (
-	NoProcessingIndicator = "@no-interactivity"
-	SelectIndexIndicator  = "@idx"
+	RawOutputIndicator   = "@raw"
+	SelectIndexIndicator = "@idx"
 )
 
 type Command struct {
@@ -26,8 +26,8 @@ func Parse(cmd string) Command {
 	out := Command{
 		ToExecute: cmd,
 	}
-	if strings.Contains(out.ToExecute, NoProcessingIndicator) {
-		out.ToExecute = strings.ReplaceAll(out.ToExecute, NoProcessingIndicator, "")
+	if strings.Contains(out.ToExecute, RawOutputIndicator) {
+		out.ToExecute = strings.ReplaceAll(out.ToExecute, RawOutputIndicator, "")
 		out.IsRawRequired = true
 	}
 

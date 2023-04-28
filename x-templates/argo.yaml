@@ -1,4 +1,4 @@
-interactive:
+templates:
   - command:
       prefix: "argo list"
       parser: "table"
