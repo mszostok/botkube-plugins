@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.szostok.io/botkube-plugins/internal/ptr"
 )
 
 func TestParse(t *testing.T) {
@@ -18,15 +16,13 @@ func TestParse(t *testing.T) {
 			expected: Command{
 				ToExecute:     "x run helm list -A",
 				IsRawRequired: false,
-				SelectIndex:   nil,
 			},
 		},
 		{
-			input: "x run helm list -A @no-interactivity",
+			input: "x run helm list -A @raw",
 			expected: Command{
 				ToExecute:     "x run helm list -A",
 				IsRawRequired: true,
-				SelectIndex:   nil,
 			},
 		},
 		{
@@ -34,7 +30,6 @@ func TestParse(t *testing.T) {
 			expected: Command{
 				ToExecute:     "x run kubectl get pods",
 				IsRawRequired: false,
-				SelectIndex:   ptr.FromType(123),
 			},
 		},
 		{
@@ -42,7 +37,6 @@ func TestParse(t *testing.T) {
 			expected: Command{
 				ToExecute:     "x run kubectl get pods @idx:abc",
 				IsRawRequired: false,
-				SelectIndex:   nil,
 			},
 		},
 	}
@@ -54,7 +48,6 @@ func TestParse(t *testing.T) {
 
 			assert.Equal(t, tc.expected.ToExecute, gotCmd.ToExecute)
 			assert.Equal(t, tc.expected.IsRawRequired, gotCmd.IsRawRequired)
-			assert.EqualValues(t, tc.expected.SelectIndex, gotCmd.SelectIndex)
 		})
 	}
 }

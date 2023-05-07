@@ -16,9 +16,12 @@ type TableSpaceSeparatedOutput struct {
 	Lines []string
 }
 
+type TableSpace struct{}
+
 // TableSpaceSeparated takes a string input and returns a slice of slices containing the separated values in each row
 // and a slice of the original input lines.
-func TableSpaceSeparated(in string) TableSpaceSeparatedOutput {
+// TODO: change the output to a JSON or YAML format to allow standardized parser interface.
+func (*TableSpace) TableSpaceSeparated(in string) TableSpaceSeparatedOutput {
 	var out TableSpaceSeparatedOutput
 	in = replaceTabsWithSpaces(in)
 	scanner := bufio.NewScanner(strings.NewReader(in))

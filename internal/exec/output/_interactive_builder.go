@@ -13,13 +13,13 @@ import (
 	"go.szostok.io/botkube-plugins/internal/exec/template"
 )
 
-type InteractiveMessage struct{}
+type InteractiveBuilderMessage struct{}
 
-func NewInteractiveTableMesage() *InteractiveMessage {
-	return &InteractiveMessage{}
+func NewInteractiveBuilderMesage() *InteractiveBuilderMessage {
+	return &InteractiveBuilderMessage{}
 }
 
-func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.Templates) (api.Message, error) {
+func (p *InteractiveBuilderMessage) RenderMessage(cmd, output string, msgCtx *template.Interactive) (api.Message, error) {
 	out := parser.TableSpaceSeparated(output)
 	if len(out.Lines) == 0 {
 		return noItemsMsg(), nil
@@ -28,7 +28,7 @@ func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.T
 	var sections []api.Section
 
 	if len(out.Table.Rows) > 0 {
-		dropdowns, err := renderDropdowns(msgCtx, out.Table, cmd, msgCtx.Message.Select.ItemIdx)
+		dropdowns, err := p.renderDropdowns(msgCtx, out.Table, cmd, msgCtx.Message.Select.ItemIdx)
 		if err != nil {
 			return api.Message{}, err
 		}
@@ -37,7 +37,7 @@ func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.T
 
 	// preview
 	if len(out.Table.Rows) > 0 {
-		preview, err := renderPreview(msgCtx, out, msgCtx.Message.Select.ItemIdx)
+		preview, err := p.renderPreview(msgCtx, out, msgCtx.Message.Select.ItemIdx)
 		if err != nil {
 			return api.Message{}, err
 		}
@@ -46,7 +46,7 @@ func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.T
 
 	// actions
 	if len(out.Table.Rows) > 0 {
-		actions, err := renderActions(msgCtx, out.Table, cmd, msgCtx.Message.Select.ItemIdx)
+		actions, err := p.renderActions(msgCtx, out.Table, cmd, msgCtx.Message.Select.ItemIdx)
 		if err != nil {
 			return api.Message{}, err
 		}
@@ -60,14 +60,14 @@ func (p InteractiveMessage) RenderMessage(cmd, output string, msgCtx *template.T
 	}, nil
 }
 
-func renderActions(msgCtx *template.Templates, table parser.Table, cmd string, idx int) (api.Section, error) {
+func (p *InteractiveBuilderMessage) renderActions(msgCtx *template.Interactive, table parser.Table, cmd string, idx int) (api.Section, error) {
 	if idx >= len(table.Rows) {
 		idx = len(table.Rows) - 1
 	}
 	btnBuilder := api.NewMessageButtonBuilder()
 	var actions []api.OptionItem
 	for name, tpl := range msgCtx.Message.Actions { // based on the selected item
-		out, err := render(tpl, table.Headers, table.Rows[idx])
+		out, err := p.render(tpl, table.Headers, table.Rows[idx])
 		if err != nil {
 			return api.Section{}, err
 		}
@@ -102,19 +102,19 @@ func renderActions(msgCtx *template.Templates, table parser.Table, cmd string, i
 	}, nil
 }
 
-func renderPreview(msgCtx *template.Templates, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
+func (p *InteractiveBuilderMessage) renderPreview(msgCtx *template.Interactive, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
 	headerLine := out.Lines[0]
 
 	if requestedRow >= len(out.Table.Rows) {
 		requestedRow = len(out.Table.Rows) - 1
 	}
 
-	renderLine := getPreviewLine(out.Lines, requestedRow)
+	renderLine := p.getPreviewLine(out.Lines, requestedRow)
 
 	preview := fmt.Sprintf("%s\n%s", headerLine, renderLine) // just print the first entry
 
 	if msgCtx.Message.Preview != "" {
-		prev, err := render(msgCtx.Message.Preview, out.Table.Headers, out.Table.Rows[requestedRow])
+		prev, err := p.render(msgCtx.Message.Preview, out.Table.Headers, out.Table.Rows[requestedRow])
 		if err != nil {
 			return api.Section{}, err
 		}
@@ -130,7 +130,7 @@ func renderPreview(msgCtx *template.Templates, out parser.TableSpaceSeparatedOut
 	}, nil
 }
 
-func getPreviewLine(lines []string, idx int) string {
+func (*InteractiveBuilderMessage) getPreviewLine(lines []string, idx int) string {
 	if len(lines) < 2 { // exclude the first line for the header
 		return ""
 	}
@@ -143,7 +143,7 @@ func getPreviewLine(lines []string, idx int) string {
 	return lines[1] // otherwise default first line
 }
 
-func renderDropdowns(msgCtx *template.Templates, table parser.Table, cmd string, idx int) (api.Section, error) {
+func (p *InteractiveBuilderMessage) renderDropdowns(msgCtx *template.Interactive, table parser.Table, cmd string, idx int) (api.Section, error) {
 	var dropdowns []api.Select
 	parent := api.Select{
 		Type:    api.StaticSelect,
@@ -155,7 +155,7 @@ func renderDropdowns(msgCtx *template.Templates, table parser.Table, cmd string,
 		Name: msgCtx.Message.Select.Name,
 	}
 	for idx, row := range table.Rows {
-		name, err := render(msgCtx.Message.Select.ItemKey, table.Headers, row)
+		name, err := p.render(msgCtx.Message.Select.ItemKey, table.Headers, row)
 		if err != nil {
 			return api.Section{}, err
 		}
@@ -178,7 +178,7 @@ func renderDropdowns(msgCtx *template.Templates, table parser.Table, cmd string,
 	}, nil
 }
 
-func render(tpl string, cols, rows []string) (string, error) {
+func (*InteractiveBuilderMessage) render(tpl string, cols, rows []string) (string, error) {
 	data := map[string]string{}
 	for idx, col := range cols {
 		col = xstrings.ToCamelCase(strings.ToLower(col))
@@ -197,16 +197,4 @@ func render(tpl string, cols, rows []string) (string, error) {
 	}
 
 	return buff.String(), nil
-}
-
-func noItemsMsg() api.Message {
-	return api.Message{
-		Sections: []api.Section{
-			{
-				Base: api.Base{
-					Description: "Not found.",
-				},
-			},
-		},
-	}
 }

@@ -13,6 +13,7 @@ import (
 
 	"go.szostok.io/botkube-plugins/internal/exec/template"
 	"go.szostok.io/botkube-plugins/internal/osx"
+	"go.szostok.io/botkube-plugins/internal/state"
 )
 
 type Runner struct {
@@ -27,7 +28,7 @@ func NewRunner(log *zap.Logger, renderer *Renderer) *Runner {
 	}
 }
 
-func (i *Runner) Run(ctx context.Context, cfg Config, tool string) (executor.ExecuteOutput, error) {
+func (i *Runner) Run(ctx context.Context, cfg Config, state *state.Container, tool string) (executor.ExecuteOutput, error) {
 	cmd := Parse(tool)
 	out, err := runCmd(ctx, cfg.TmpDir, cmd.ToExecute)
 	if err != nil {
@@ -47,6 +48,10 @@ func (i *Runner) Run(ctx context.Context, cfg Config, tool string) (executor.Exe
 		return executor.ExecuteOutput{}, err
 	}
 
+	for _, tpl := range templates.Templates {
+		i.log.Info("Command template", zap.String("trigger", tpl.Trigger.Command), zap.String("type", tpl.Type))
+	}
+
 	cmdTemplate, found := templates.FindWithPrefix(cmd.ToExecute)
 	if !found {
 		i.log.Info("Templates config not found for command")
@@ -55,16 +60,11 @@ func (i *Runner) Run(ctx context.Context, cfg Config, tool string) (executor.Exe
 		}, nil
 	}
 
-	if cmd.SelectIndex != nil { // TODO: find a more generic approach
-		i.log.Info("A specific line was selected", zap.Int("idx", *cmd.SelectIndex))
-		cmdTemplate.Message.Select.ItemIdx = *cmd.SelectIndex
-		cmdTemplate.Message.Select.Replace = true
-	}
-	render, err := i.renderer.Get(cmdTemplate.Command.Parser)
+	render, err := i.renderer.Get(cmdTemplate.Type) // Message.Type
 	if err != nil {
 		return executor.ExecuteOutput{}, err
 	}
-	message, err := render.RenderMessage(cmd.ToExecute, out, &cmdTemplate)
+	message, err := render.RenderMessage(cmd.ToExecute, out, state, &cmdTemplate)
 	if err != nil {
 		return executor.ExecuteOutput{}, err
 	}

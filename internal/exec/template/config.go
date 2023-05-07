@@ -1,6 +1,11 @@
 package template
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
 
 type Source struct {
 	Ref string `yaml:"ref"`
@@ -8,38 +13,85 @@ type Source struct {
 
 type (
 	Config struct {
-		Templates []Templates `yaml:"templates"`
-	}
-	Templates struct {
-		Message InteractiveMessage `yaml:"message"`
-		Command InteractiveCommand `yaml:"command"`
+		Templates []Template `yaml:"templates"`
 	}
 
-	InteractiveCommand struct {
-		Parser string `yaml:"parser"`
-		Prefix string `yaml:"prefix"`
+	Template struct {
+		Type           string         `yaml:"type"`
+		Trigger        Trigger        `yaml:"trigger"`
+		ParseMessage   ParseMessage   `yaml:"-"`
+		BuilderMessage BuilderMessage `yaml:"-"`
 	}
 
-	InteractiveMessage struct {
-		Select  DropdownSelect    `yaml:"select"`
+	Trigger struct {
+		Command string `yaml:"command"`
+	}
+
+	ParseMessage struct {
+		Selects []Select          `yaml:"selects"`
 		Actions map[string]string `yaml:"actions"`
 		Preview string            `yaml:"preview"`
 	}
-
-	DropdownSelect struct {
-		Name    string `yaml:"name"`
-		ItemKey string `yaml:"itemKey"`
-		ItemIdx int    `json:"-"`
-		Replace bool   `json:"-"`
+	BuilderMessage struct {
+		Template string            `yaml:"template"`
+		Selects  []Select          `yaml:"selects"`
+		Actions  map[string]string `yaml:"actions"`
+	}
+	Select struct {
+		Name   string `yaml:"name"`
+		KeyTpl string `yaml:"keyTpl"`
 	}
 )
 
-func (e Config) FindWithPrefix(cmd string) (Templates, bool) {
-	for _, item := range e.Templates {
-		if strings.HasPrefix(cmd, item.Command.Prefix) {
+func (su *Template) UnmarshalYAML(node *yaml.Node) error {
+	var data struct {
+		Type    string  `yaml:"type"`
+		Trigger Trigger `yaml:"trigger"`
+	}
+	err := node.Decode(&data)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case strings.HasPrefix(data.Type, "builder"):
+		var data struct {
+			Message BuilderMessage `yaml:"message"`
+		}
+		err = node.Decode(&data)
+		if err != nil {
+			return err
+		}
+		su.BuilderMessage = data.Message
+	case strings.HasPrefix(data.Type, "parser:"):
+		var data struct {
+			Message ParseMessage `yaml:"message"`
+		}
+		err = node.Decode(&data)
+		if err != nil {
+			return err
+		}
+		su.ParseMessage = data.Message
+	}
+
+	su.Type = data.Type
+	su.Trigger = data.Trigger
+	return nil
+}
+
+func (e Config) FindWithPrefix(cmd string) (Template, bool) {
+	for idx := range e.Templates {
+		item := e.Templates[idx]
+		if item.Trigger.Command == "" {
+			continue
+		}
+
+		fmt.Println(cmd)
+		fmt.Println(item.Trigger.Command)
+		if strings.HasPrefix(cmd, item.Trigger.Command) {
 			return item, true
 		}
 	}
 
-	return Templates{}, false
+	return Template{}, false
 }

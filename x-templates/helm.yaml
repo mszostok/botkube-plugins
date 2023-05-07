@@ -1,13 +1,13 @@
 templates:
-  - command:
-      prefix: "helm list"
-      parser: "table"
+  - trigger:
+      command: "helm list"
+    type: "parser:table:space"
     message:
-      select:
-        name: "Release"
-        itemKey: "{{ .Namespace }}/{{ .Name }}"
+      selects:
+        - name: "Release"
+          keyTpl: "{{ .Namespace }}/{{ .Name }}"
       actions:
-        notes:  "helm get notes  {{ .Name }} -n {{ .Namespace }}"
+        notes: "helm get notes  {{ .Name }} -n {{ .Namespace }}"
         values: "helm get values {{ .Name }} -n {{ .Namespace }}"
         delete: "helm delete     {{ .Name }} -n {{ .Namespace }}"
       preview: |
@@ -15,3 +15,28 @@ templates:
         Namespace:   {{ .Namespace }}
         Status:      {{ .Status }}
         Chart:       {{ .Chart }}
+  #
+  #  #  todo, add dropdown as enum
+  #  #  is the below API syntax readable?  What can be improved? The below syntax tell an external tool to parse return a dedicated message when user runs `helm rollback` command. This message should have 2 dropdowns. The second one depends on the item that was selected on the first dropdown. Dropdowns requires command output to be able to populate it with a given items. Finally, when all both dropdowns will be selected a final "helm show" command can be built and executed e.g. "helm rollback <RELEASE> [REVISION]"
+  - trigger:
+      command: "helm rollback" # ^helm\s+rollback$ regex?..
+    type: "builder" # "parser"
+    message:
+      template: "helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }} {{ .Version.Revision}}"
+      selects:
+        - name: "Release"
+          keyTpl: "{{ .Namespace }}/{{ .Name }}"
+          source:
+            command: "helm list -A" #  otherwise 'helm list -A @raw'
+            parser: "table"
+        - name: "Version"
+          needs: [ "Release" ]
+          keyTpl: "{{ .REVISION }}"
+          source:
+            command: "helm history {{ .Release.Name }} -n {{ .Release.Namespace }}"
+            parser: "table"
+      actions:
+        history: "helm history {{ .Release.Name }} -n {{ .Release.Namespace }}"
+
+# 1. hook after runs to parse the message and display it in a better shape, also provides interaction with a givne message
+#.2. hook before runs to intercept the command execution and

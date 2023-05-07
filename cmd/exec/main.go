@@ -17,6 +17,7 @@ import (
 	"go.szostok.io/botkube-plugins/internal/exec/output"
 	"go.szostok.io/botkube-plugins/internal/formatx"
 	"go.szostok.io/botkube-plugins/internal/loggerx"
+	"go.szostok.io/botkube-plugins/internal/state"
 )
 
 // version is set via ldflags by GoReleaser.
@@ -82,7 +83,7 @@ func escapePositionals(in string) string {
 
 // Execute returns a given command as response.
 //
-//nolint:gocritic // hugeParam: in is heavy (80 bytes); consider passing it by pointe
+//nolint:gocritic // hugeParam: in is heavy (80 bytes); consider passing it by pointer
 func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput) (executor.ExecuteOutput, error) {
 	var cmd Commands
 	in.Command = escapePositionals(in.Command)
@@ -109,12 +110,18 @@ func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput)
 		i.log.Info("Running command...", zap.String("tool", tool))
 
 		renderer := x.NewRenderer()
-		err := renderer.Register("table", output.NewInteractiveTableMesage())
+		err := renderer.Register("parser:table:space", output.NewTableCommandParser(i.log))
 		if err != nil {
 			return executor.ExecuteOutput{}, err
 		}
+		//
+		//err = renderer.Register("builder", output.NewInteractiveBuilderMesage())
+		//if err != nil {
+		//	return executor.ExecuteOutput{}, err
+		//}
 
-		return x.NewRunner(i.log, renderer).Run(ctx, cfg, tool)
+		state := state.ExtractSlackState(in.Context.SlackState)
+		return x.NewRunner(i.log, renderer).Run(ctx, cfg, state, tool)
 	case cmd.Install != nil:
 		var (
 			tool          = formatx.Normalize(strings.Join(cmd.Install.Tool, " "))

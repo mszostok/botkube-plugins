@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.8
 	github.com/huandu/xstrings v1.3.2
 	github.com/kubeshop/botkube v1.0.0
+	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
@@ -80,7 +81,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
-	github.com/sanity-io/litter v1.5.5 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/slack-go/slack v0.12.1 // indirect
 	github.com/spiffe/spire v1.5.3 // indirect
