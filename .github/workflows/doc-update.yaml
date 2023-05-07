@@ -15,5 +15,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.GH_DISPATH }}
-          repository: mszostok/dokuverse
+          repository: mszostok/docuverse
           event-type: botkube-plugins
