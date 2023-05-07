@@ -53,7 +53,7 @@ The `x` plugin supports templates that describe how to convert the command outpu
 
 Here is an example syntax that converts `helm list -A` command into an interactive message using Botkube's `x` plugin:
 
-```
+```yaml
 templates:
   - command:
       prefix: "helm list"
