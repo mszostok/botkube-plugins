@@ -1,0 +1,19 @@
+name: Dispatch docu update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+
+jobs:
+  trigger-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docuverse update
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.GH_DISPATH }}
+          repository: mszostok/dokuverse
+          event-type: botkube-plugins
