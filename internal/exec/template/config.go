@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubeshop/botkube/pkg/api"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,11 +17,14 @@ type (
 		Templates []Template `yaml:"templates"`
 	}
 
-	Template struct {
-		Type           string         `yaml:"type"`
-		Trigger        Trigger        `yaml:"trigger"`
-		ParseMessage   ParseMessage   `yaml:"-"`
-		BuilderMessage BuilderMessage `yaml:"-"`
+	Templates []Template
+	Template  struct {
+		Type            string          `yaml:"type"`
+		Trigger         Trigger         `yaml:"trigger"`
+		ParseMessage    ParseMessage    `yaml:"-"`
+		BuilderMessage  BuilderMessage  `yaml:"-"`
+		WrapMessage     WrapMessage     `yaml:"-"`
+		TutorialMessage TutorialMessage `yaml:"-"`
 	}
 
 	Trigger struct {
@@ -32,10 +36,22 @@ type (
 		Actions map[string]string `yaml:"actions"`
 		Preview string            `yaml:"preview"`
 	}
+	WrapMessage struct {
+		Buttons api.Buttons `yaml:"buttons"`
+	}
 	BuilderMessage struct {
 		Template string            `yaml:"template"`
 		Selects  []Select          `yaml:"selects"`
 		Actions  map[string]string `yaml:"actions"`
+	}
+	TutorialMessage struct {
+		Buttons  api.Buttons `yaml:"buttons"`
+		Header   string      `yaml:"header"`
+		Paginate Paginate    `yaml:"paginate"`
+	}
+	Paginate struct {
+		Page        int `yaml:"page"`
+		CurrentPage int `yaml:"-"`
 	}
 	Select struct {
 		Name   string `yaml:"name"`
@@ -72,6 +88,24 @@ func (su *Template) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		su.ParseMessage = data.Message
+	case data.Type == "wrapper":
+		var data struct {
+			Message WrapMessage `yaml:"message"`
+		}
+		err = node.Decode(&data)
+		if err != nil {
+			return err
+		}
+		su.WrapMessage = data.Message
+	case data.Type == "tutorial":
+		var data struct {
+			Message TutorialMessage `yaml:"message"`
+		}
+		err = node.Decode(&data)
+		if err != nil {
+			return err
+		}
+		su.TutorialMessage = data.Message
 	}
 
 	su.Type = data.Type

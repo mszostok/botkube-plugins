@@ -8,7 +8,6 @@ import (
 
 	"github.com/huandu/xstrings"
 	"github.com/kubeshop/botkube/pkg/api"
-	"github.com/sanity-io/litter"
 	"go.uber.org/zap"
 
 	"go.szostok.io/botkube-plugins/internal/exec"
@@ -18,7 +17,7 @@ import (
 )
 
 type Parser interface {
-	TableSpaceSeparated(in string) parser.TableSpaceSeparatedOutput
+	TableSeparated(in string) parser.TableOutput
 }
 
 type CommandParser struct {
@@ -30,7 +29,8 @@ func NewTableCommandParser(log *zap.Logger) *CommandParser {
 	return &CommandParser{
 		log: log,
 		parsers: map[string]Parser{
-			"space": &parser.TableSpace{},
+			"space":  &parser.TableSpace{},
+			"char:|": parser.NewTableChar(),
 		},
 	}
 }
@@ -44,8 +44,7 @@ func (p *CommandParser) RenderMessage(cmd, output string, state *state.Container
 		return api.NewPlaintextMessage(note, false), nil
 	}
 
-	litter.Dump(state)
-	out := parser.TableSpaceSeparated(output)
+	out := parser.TableSeparated(output)
 	if len(out.Lines) == 0 || len(out.Table.Rows) == 0 {
 		return noItemsMsg(), nil
 	}
@@ -121,7 +120,7 @@ func (p *CommandParser) renderActions(msgCtx template.ParseMessage, table parser
 	}, nil
 }
 
-func (p *CommandParser) renderPreview(msgCtx template.ParseMessage, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
+func (p *CommandParser) renderPreview(msgCtx template.ParseMessage, out parser.TableOutput, requestedRow int) (api.Section, error) {
 	headerLine := out.Lines[0]
 
 	if requestedRow >= len(out.Table.Rows) {
@@ -233,17 +232,13 @@ func (p *CommandParser) selectDropdown(name, cmd, keyTpl string, table parser.Ta
 }
 
 func (*CommandParser) resolveSelectIdx(state *state.Container, selectID string) int {
-	fmt.Println(selectID)
 	item := state.GetField(selectID)
 	if item == "" {
 		return 0
 	}
 
-	fmt.Println(item)
 	_, item, _ = strings.Cut(item, exec.SelectIndexIndicator)
-	fmt.Println(item)
 	val, _ := strconv.Atoi(item)
-	fmt.Println(val)
 	return val
 }
 
@@ -253,6 +248,8 @@ func (*CommandParser) renderGoTemplate(tpl string, cols, rows []string) (string,
 		col = xstrings.ToCamelCase(strings.ToLower(col))
 		data[col] = rows[idx]
 	}
+
+	fmt.Println(data)
 
 	tmpl, err := gotemplate.New("tpl").Parse(tpl)
 	if err != nil {

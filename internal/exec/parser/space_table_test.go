@@ -31,8 +31,9 @@ func TestTableSpaceSeparated(t *testing.T) {
 		replaceTabsWithSpaces("traefik-crd	kube-system	1       	2023-04-19 20:58:56.564578223 +0000 UTC	deployed	traefik-crd-10.19.300"),
 	}
 
+	parserTable := &TableSpace{}
 	// when
-	actual := TableSpaceSeparated(input)
+	actual := parserTable.TableSeparated(input)
 
 	// then
 	assert.Equal(t, expectedTable, actual.Table)

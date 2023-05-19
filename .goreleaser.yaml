@@ -18,6 +18,15 @@ builds:
       - arm64
     goarm: &goarm
       - 7
+  - id: cliccando
+    main: cmd/cliccando/main.go
+    binary: executor_cliccando_{{ .Os }}_{{ .Arch }}
+
+    no_unique_dist_dir: true
+    env: *env
+    goos: *goos
+    goarch: *goarch
+    goarm: *goarm
 
 snapshot:
   name_template: 'v{{ .Version }}'

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"strings"
 	"unicode"
+
+	"go.szostok.io/botkube-plugins/internal/mathx"
 )
 
 type Table struct {
@@ -11,18 +13,18 @@ type Table struct {
 	Rows    [][]string
 }
 
-type TableSpaceSeparatedOutput struct {
+type TableOutput struct {
 	Table Table
 	Lines []string
 }
 
 type TableSpace struct{}
 
-// TableSpaceSeparated takes a string input and returns a slice of slices containing the separated values in each row
+// TableSeparated takes a string input and returns a slice of slices containing the separated values in each row
 // and a slice of the original input lines.
 // TODO: change the output to a JSON or YAML format to allow standardized parser interface.
-func (*TableSpace) TableSpaceSeparated(in string) TableSpaceSeparatedOutput {
-	var out TableSpaceSeparatedOutput
+func (*TableSpace) TableSeparated(in string) TableOutput {
+	var out TableOutput
 	in = replaceTabsWithSpaces(in)
 	scanner := bufio.NewScanner(strings.NewReader(in))
 
@@ -59,8 +61,8 @@ func getSeparators(line string) []int {
 		}
 
 		var (
-			previousIdx = decreaseWithMin(idx, 0)
-			nextIdx     = increaseWithMax(idx, len(line))
+			previousIdx = mathx.DecreaseWithMin(idx, 0)
+			nextIdx     = mathx.IncreaseWithMax(idx, len(line)-1)
 
 			isNextSpace  = unicode.IsSpace(rune(line[nextIdx]))
 			wasPrevSpace = unicode.IsSpace(rune(line[previousIdx]))
@@ -76,22 +78,6 @@ func getSeparators(line string) []int {
 		separators = append(separators, idx)
 	}
 	return separators
-}
-
-func increaseWithMax(in, max int) int {
-	in++
-	if in > max {
-		return max
-	}
-	return in
-}
-
-func decreaseWithMin(in, min int) int {
-	in--
-	if in < min {
-		return min
-	}
-	return in
 }
 
 // function takes a line and a list of separators and returns a list of cells (the line divided by the separators)

@@ -102,7 +102,7 @@ func (p *InteractiveBuilderMessage) renderActions(msgCtx *template.Interactive, 
 	}, nil
 }
 
-func (p *InteractiveBuilderMessage) renderPreview(msgCtx *template.Interactive, out parser.TableSpaceSeparatedOutput, requestedRow int) (api.Section, error) {
+func (p *InteractiveBuilderMessage) renderPreview(msgCtx *template.Interactive, out parser.TableOutput, requestedRow int) (api.Section, error) {
 	headerLine := out.Lines[0]
 
 	if requestedRow >= len(out.Table.Rows) {

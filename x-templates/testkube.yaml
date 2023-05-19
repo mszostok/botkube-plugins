@@ -1,0 +1,69 @@
+templates:
+  - trigger:
+      command: "kubectl-testkube get test"
+    type: "parser:table:char:|"
+    message:
+      selects:
+        - name: "Release"
+          keyTpl: "{{ .Name }}"
+      actions:
+        'execution details': "kubectl-testkube get execution {{ .ExecutionId }}"
+        'run': "kubectl-testkube run test {{ .Name }}"
+        'delete': "kubectl-testkube delete test {{ .Name }}"
+      preview: |
+        Name:          {{ .Name }}
+        Type:          {{ .Type }}
+        Status:        {{ .Status }}
+        Execution ID:  {{ .ExecutionId }}
+
+  - trigger:
+      command: "kubectl-testkube get executions"
+    type: "parser:table:char:|"
+    message:
+      selects:
+        - name: "Release"
+          keyTpl: "{{ .Name }}"
+      actions:
+        'execution details': "kubectl-testkube get execution {{  .Name  }}"
+      preview: |
+        Name:          {{ .Name }}
+        Type:          {{ .Type }}
+        Status:        {{ .Status }}
+        Test Name:     {{ .TestName }}
+
+  - trigger:
+      command: "x install kubeshop/testkube --file kubectl-testkube"
+    type: "wrapper"
+    message:
+      buttons:
+        - name: "Quick Start"
+          command: "{{BotName}} x run quickstart testkube"
+          style: "primary"
+
+  - trigger:
+      command: "quickstart testkube"
+    type: "tutorial"
+    message:
+      paginate:
+        page: 5
+      header: "Testkube Quick Start tutorial"
+      buttons:
+        - name: "Install Testkube components"
+          command: "{{BotName}} x run kubectl-testkube init --no-confirm"
+          description: "{{BotName}} testkube init "
+        - name: "Create example test"
+          command: "{{BotName}} x run kubectl-testkube create test --git-uri https://github.com/kubeshop/testkube-executor-cypress.git --git-branch main --git-path examples --name kubeshop-cypress --type cypress/project"
+          description: |
+            {{BotName}} testkube create test --name kubeshop-cypress --type cypress/project 
+              --git-uri https://github.com/kubeshop/testkube-executor-cypress.git
+              --git-branch main 
+              --git-path examples
+        - name: "Run the test"
+          command: "{{BotName}} x run kubectl-testkube run test kubeshop-cypress"
+          description: "{{BotName}} testkube run test kubeshop-cypress"
+        - name: "List all tests"
+          command: "{{BotName}} x run kubectl-testkube get tests"
+          description: "{{BotName}} testkube get tests"
+        - name: "Delete the test"
+          command: "{{BotName}} x run kubectl-testkube delete test kubeshop-cypress"
+          description: "{{BotName}} testkube delete test kubeshop-cypress"

@@ -7,7 +7,7 @@ templates:
         - name: "Release"
           keyTpl: "{{ .Namespace }}/{{ .Name }}"
       actions:
-        notes: "helm get notes  {{ .Name }} -n {{ .Namespace }}"
+        notes:  "helm get notes  {{ .Name }} -n {{ .Namespace }}"
         values: "helm get values {{ .Name }} -n {{ .Namespace }}"
         delete: "helm delete     {{ .Name }} -n {{ .Namespace }}"
       preview: |
@@ -15,6 +15,60 @@ templates:
         Namespace:   {{ .Namespace }}
         Status:      {{ .Status }}
         Chart:       {{ .Chart }}
+
+  - trigger:
+      command: "quickstart flux"
+    message:
+      paginate:
+        page: 5
+      header: "Helm Quick Start tutorial"
+      buttons:
+        - name: "Global Help"
+          description: "{{Botkube}} helm help"
+          command: "{{Botkube}} helm help"
+        - name: "Version"
+          description: "{{Botkube}} helm version -h"
+          command: "{{Botkube}} helm version -h"
+        - name: "Version"
+          description: "{{Botkube}} helm version"
+          command: "{{Botkube}} helm version"
+        - name: "Install help"
+          description: "{{Botkube}} helm install -h"
+          command: "{{Botkube}} helm install -h"
+        - name: "Install by absolute URL"
+          description: "{{Botkube}} helm install\n--repo https://charts.bitnami.com/bitnami psql postgresql\n--set clusterDomain='testing.local'"
+          command: "{{Botkube}} helm install\n--repo https://charts.bitnami.com/bitnami psql postgresql\n--set clusterDomain='testing.local'"
+        - name: "Install by chart reference:"
+          description: "{{Botkube}} helm install https://charts.bitnami.com/bitnami/postgresql-12.1.0.tgz --create-namespace -n test --generate-name"
+          command: "{{Botkube}} helm install https://charts.bitnami.com/bitnami/postgresql-12.1.0.tgz --create-namespace -n test --generate-name"
+        - name: "List"
+          description: "{{Botkube}} helm list -h"
+          command: "{{Botkube}} helm list -h"
+        - name: "List"
+          description: "{{Botkube}} helm list -A"
+          command: "{{Botkube}} helm list -A"
+        - name: "List"
+          description: "{{Botkube}} helm list -f 'p' -A"
+          command: "{{Botkube}} helm list -f 'p' -A"
+        - name: "Status"
+          description: "{{Botkube}} helm status -h"
+          command: "{{Botkube}} helm status -h"
+        - name: "Status"
+          description: "{{Botkube}} helm status psql"
+          command: "{{Botkube}} helm status psql"
+        - name: "Upgrade"
+          description: "{{Botkube}} helm upgrade -h"
+          command: "{{Botkube}} helm upgrade -h"
+        - name: "Upgrade"
+          description: "{{Botkube}} helm upgrade --repo https://charts.bitnami.com/bitnami psql postgresql --set clusterDomain='cluster.local'"
+          command: "{{Botkube}} helm upgrade --repo https://charts.bitnami.com/bitnami psql postgresql --set clusterDomain='cluster.local'"
+        - name: "History"
+          description: "{{Botkube}} helm history -h"
+          command: "{{Botkube}} helm history -h"
+        - name: "History"
+          description: "{{Botkube}} helm history psql"
+          command: "{{Botkube}} helm history psql"
+
   #
   #  #  todo, add dropdown as enum
   #  #  is the below API syntax readable?  What can be improved? The below syntax tell an external tool to parse return a dedicated message when user runs `helm rollback` command. This message should have 2 dropdowns. The second one depends on the item that was selected on the first dropdown. Dropdowns requires command output to be able to populate it with a given items. Finally, when all both dropdowns will be selected a final "helm show" command can be built and executed e.g. "helm rollback <RELEASE> [REVISION]"

@@ -15,6 +15,7 @@ import (
 
 	x "go.szostok.io/botkube-plugins/internal/exec"
 	"go.szostok.io/botkube-plugins/internal/exec/output"
+	"go.szostok.io/botkube-plugins/internal/exec/template"
 	"go.szostok.io/botkube-plugins/internal/formatx"
 	"go.szostok.io/botkube-plugins/internal/loggerx"
 	"go.szostok.io/botkube-plugins/internal/state"
@@ -25,12 +26,12 @@ var version = "dev"
 
 const pluginName = "x"
 
-// InstallExecutor implements Botkube executor plugin.
-type InstallExecutor struct {
+// XExecutor implements Botkube executor plugin.
+type XExecutor struct {
 	log *zap.Logger
 }
 
-func (i *InstallExecutor) Help(_ context.Context) (api.Message, error) {
+func (i *XExecutor) Help(_ context.Context) (api.Message, error) {
 	help := heredoc.Doc(`
 		Usage:
 		  x run [COMMAND] [FLAGS]    Run a specified command with optional flags
@@ -51,11 +52,12 @@ func (i *InstallExecutor) Help(_ context.Context) (api.Message, error) {
 }
 
 // Metadata returns details about Echo plugin.
-func (*InstallExecutor) Metadata(context.Context) (api.MetadataOutput, error) {
+func (*XExecutor) Metadata(context.Context) (api.MetadataOutput, error) {
 	return api.MetadataOutput{
 		Version:      version,
 		Description:  "Install and run CLIs directly from chat window without hassle. All magic included.",
 		Dependencies: x.GetPluginDependencies(),
+		JSONSchema:   jsonSchema(),
 	}, nil
 }
 
@@ -84,7 +86,7 @@ func escapePositionals(in string) string {
 // Execute returns a given command as response.
 //
 //nolint:gocritic // hugeParam: in is heavy (80 bytes); consider passing it by pointer
-func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput) (executor.ExecuteOutput, error) {
+func (i *XExecutor) Execute(ctx context.Context, in executor.ExecuteInput) (executor.ExecuteOutput, error) {
 	var cmd Commands
 	in.Command = escapePositionals(in.Command)
 	err := pluginx.ParseCommand(pluginName, in.Command, &cmd)
@@ -104,16 +106,25 @@ func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput)
 		return executor.ExecuteOutput{}, err
 	}
 
+	renderer := x.NewRenderer()
+	err = renderer.Register("parser:table:.*", output.NewTableCommandParser(i.log))
+	if err != nil {
+		return executor.ExecuteOutput{}, err
+	}
+	err = renderer.Register("wrapper", output.NewCommandWrapper(i.log))
+	if err != nil {
+		return executor.ExecuteOutput{}, err
+	}
+	err = renderer.Register("tutorial", output.NewTutorialWrapper(i.log))
+	if err != nil {
+		return executor.ExecuteOutput{}, err
+	}
+
 	switch {
 	case cmd.Run != nil:
 		tool := formatx.Normalize(strings.Join(cmd.Run.Tool, " "))
 		i.log.Info("Running command...", zap.String("tool", tool))
 
-		renderer := x.NewRenderer()
-		err := renderer.Register("parser:table:space", output.NewTableCommandParser(i.log))
-		if err != nil {
-			return executor.ExecuteOutput{}, err
-		}
 		//
 		//err = renderer.Register("builder", output.NewInteractiveBuilderMesage())
 		//if err != nil {
@@ -136,9 +147,31 @@ func (i *InstallExecutor) Execute(ctx context.Context, in executor.ExecuteInput)
 			return executor.ExecuteOutput{}, err
 		}
 
+		templates, err := template.Load(ctx, cfg.TmpDir.GetDirectory(), cfg.Templates)
+		if err != nil {
+			return executor.ExecuteOutput{}, err
+		}
+
+		cmdTemplate, found := templates.FindWithPrefix(fmt.Sprintf("x install %s", tool))
+		if !found {
+			i.log.Info("Templates config not found for install command")
+			return executor.ExecuteOutput{
+				Message: api.NewPlaintextMessage("Binary was installed successfully", false),
+			}, nil
+		}
+
+		render, err := renderer.Get(cmdTemplate.Type) // Message.Type
+		if err != nil {
+			return executor.ExecuteOutput{}, err
+		}
+		message, err := render.RenderMessage(tool, "Binary was installed successfully :tada:", nil, &cmdTemplate)
+		if err != nil {
+			return executor.ExecuteOutput{}, err
+		}
 		return executor.ExecuteOutput{
-			Message: api.NewPlaintextMessage("Binary was installed successfully", false),
+			Message: message,
 		}, nil
+
 	}
 	return executor.ExecuteOutput{
 		Message: api.NewPlaintextMessage("Command not supported", false),
@@ -153,9 +186,39 @@ func main() {
 
 	executor.Serve(map[string]plugin.Plugin{
 		pluginName: &executor.Plugin{
-			Executor: &InstallExecutor{
+			Executor: &XExecutor{
 				log: logger,
 			},
 		},
 	})
+}
+
+// jsonSchema returns JSON schema for the executor.
+func jsonSchema() api.JSONSchema {
+	return api.JSONSchema{
+		Value: heredoc.Docf(`{
+
+			  "$schema": "http://json-schema.org/draft-07/schema#",
+			  "title": "x",
+			  "description": "Install and run CLIs directly from chat window without hassle. All magic included.",
+			  "type": "object",
+			  "properties": {
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "default": "github.com/mszostok/botkube-plugins//x-templates?ref=hackathon"
+          }
+        },
+        "required": ["ref"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["templates"]
+			}`),
+	}
 }

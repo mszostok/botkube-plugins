@@ -8,7 +8,6 @@ import (
 	"github.com/gookit/color"
 	"github.com/kubeshop/botkube/pkg/api"
 	"github.com/kubeshop/botkube/pkg/api/executor"
-	"github.com/kubeshop/botkube/pkg/pluginx"
 	"go.uber.org/zap"
 
 	"go.szostok.io/botkube-plugins/internal/exec/template"
@@ -30,18 +29,6 @@ func NewRunner(log *zap.Logger, renderer *Renderer) *Runner {
 
 func (i *Runner) Run(ctx context.Context, cfg Config, state *state.Container, tool string) (executor.ExecuteOutput, error) {
 	cmd := Parse(tool)
-	out, err := runCmd(ctx, cfg.TmpDir, cmd.ToExecute)
-	if err != nil {
-		i.log.Error("failed to run command", zap.String("command", cmd.ToExecute), zap.Error(err))
-		return executor.ExecuteOutput{}, err
-	}
-
-	if cmd.IsRawRequired {
-		i.log.Info("Raw output was explicitly requested")
-		return executor.ExecuteOutput{
-			Message: api.NewCodeBlockMessage(out, true),
-		}, nil
-	}
 
 	templates, err := template.Load(ctx, cfg.TmpDir.GetDirectory(), cfg.Templates)
 	if err != nil {
@@ -53,10 +40,27 @@ func (i *Runner) Run(ctx context.Context, cfg Config, state *state.Container, to
 	}
 
 	cmdTemplate, found := templates.FindWithPrefix(cmd.ToExecute)
+
+	var out string
+	if !found || cmdTemplate.Type != "tutorial" {
+		out, err = runCmd(ctx, cfg.TmpDir, cmd.ToExecute)
+		if err != nil {
+			i.log.Error("failed to run command", zap.String("command", cmd.ToExecute), zap.Error(err))
+			return executor.ExecuteOutput{}, err
+		}
+	}
+
+	if cmd.IsRawRequired {
+		i.log.Info("Raw output was explicitly requested")
+		return executor.ExecuteOutput{
+			Message: api.NewCodeBlockMessage(out, true),
+		}, nil
+	}
+
 	if !found {
 		i.log.Info("Templates config not found for command")
 		return executor.ExecuteOutput{
-			Message: api.NewCodeBlockMessage(out, true),
+			Message: api.NewCodeBlockMessage(color.ClearCode(out), true),
 		}, nil
 	}
 
@@ -64,6 +68,8 @@ func (i *Runner) Run(ctx context.Context, cfg Config, state *state.Container, to
 	if err != nil {
 		return executor.ExecuteOutput{}, err
 	}
+
+	cmdTemplate.TutorialMessage.Paginate.CurrentPage = cmd.PageIndex
 	message, err := render.RenderMessage(cmd.ToExecute, out, state, &cmdTemplate)
 	if err != nil {
 		return executor.ExecuteOutput{}, err
@@ -83,7 +89,8 @@ func runCmd(ctx context.Context, tmp osx.TmpDir, in string) (string, error) {
 	fmt.Println(custom)
 	fmt.Println(in)
 
-	out, err := pluginx.ExecuteCommand(ctx, in)
+	//out, err := pluginx.ExecuteCommand(ctx, in)
+	out, err := ExecuteCommand(ctx, in)
 	if err != nil {
 		return "", err
 	}

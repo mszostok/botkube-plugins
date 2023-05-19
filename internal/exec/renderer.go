@@ -2,11 +2,13 @@ package exec
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/kubeshop/botkube/pkg/api"
+	"golang.org/x/exp/maps"
 
 	"go.szostok.io/botkube-plugins/internal/exec/template"
 	"go.szostok.io/botkube-plugins/internal/state"
@@ -49,10 +51,21 @@ func (r *Renderer) Get(output string) (Render, error) {
 	defer r.mux.RUnlock()
 
 	printer, found := r.renderer[output]
-	if !found {
-		return nil, fmt.Errorf("formatter %q is not available, allowed formatters %q", output, r.availablePrinters())
+	if found {
+		return printer, nil
+
 	}
-	return printer, nil
+	keys := maps.Keys(r.renderer)
+	for _, key := range keys {
+		matched, err := regexp.MatchString(key, output)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return r.renderer[key], nil
+		}
+	}
+	return nil, fmt.Errorf("formatter %q is not available, allowed formatters %q", output, r.availablePrinters())
 }
 
 func (r *Renderer) availablePrinters() string {

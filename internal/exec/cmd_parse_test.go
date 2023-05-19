@@ -35,8 +35,9 @@ func TestParse(t *testing.T) {
 		{
 			input: "x run kubectl get pods @idx:abc",
 			expected: Command{
-				ToExecute:     "x run kubectl get pods @idx:abc",
+				ToExecute:     "x run kubectl get pods @idx:abc @page:1",
 				IsRawRequired: false,
+				PageIndex:     1,
 			},
 		},
 	}
