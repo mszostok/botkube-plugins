@@ -22,7 +22,7 @@ jobs:
           cache: true
 
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@v5
         with:
           install-only: true
           version: latest
@@ -64,5 +64,4 @@ jobs:
           gh release create "${GITHUB_REF#refs/tags/}" \
           --notes-file release.md \
           ./plugin-dist/source_* \
-          ./plugin-dist/executor_* \
           ./plugins-index.yaml
