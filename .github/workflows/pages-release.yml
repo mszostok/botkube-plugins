@@ -39,13 +39,15 @@ jobs:
         uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
-          args: build --rm-dist
+          args: build --clean
 
-      - name: Generate plugins index.yaml
+      - name: Build plugins and generate plugins index.yaml
+        uses: magefile/mage-action@v3
+        with:
+          args: build:plugins
         env:
           PLUGIN_DOWNLOAD_URL_BASE_PATH: "https://${{github.repository_owner}}.github.io/${{ github.event.repository.name }}"
-        run: |
-          go run github.com/kubeshop/botkube/hack -binaries-path "./dist"
+
       - name: Release description
         env:
           PLUGIN_DOWNLOAD_URL_BASE_PATH: "https://${{github.repository_owner}}.github.io/${{ github.event.repository.name }}"
@@ -82,8 +84,8 @@ jobs:
       - name: Publish GitHub release
         run: |
           mkdir public
-          mv dist/executor_* public/
-          mv dist/source_* public/
+          mv plugin-dist/executor_* public/
+          mv plugin-dist/source_* public/
           mv plugins-index.yaml public/
           mv index.html public/
 

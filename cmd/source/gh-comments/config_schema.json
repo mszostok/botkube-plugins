@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub comments watcher",
+  "description": "Watches for a new GitHub comments. Developed to showcase how you can run executors from GitHub comments.",
+  "type": "object",
+  "properties": {
+    "github": {
+      "type": "object",
+      "properties": {
+        "auth": {
+          "type": "object",
+          "properties": {
+            "accessToken": {
+              "type": "string",
+              "description": "The GitHub access token. Instruction for creating a token can be found here: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/#creating-a-token."
+            }
+          }
+        }
+      }
+    },
+    "onRepository": {
+      "type": "object",
+      "properties": {
+        "recheckInterval": {
+          "type": "string",
+          "format": "duration",
+          "default": "5s",
+          "description": "The interval for rechecking for a new comments on configured repository."
+        },
+        "commentRequiredPrefix": {
+          "type": "string",
+          "default": "#run",
+          "description": "The prefix required for comments, if any."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the GitHub repository in the form 'owner/repository'.",
+          "minLength": 3
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  "required": [
+    "onRepository"
+  ]
+}

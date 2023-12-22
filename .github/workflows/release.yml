@@ -28,11 +28,12 @@ jobs:
           version: latest
 
       - name: Build plugins and generate plugins index.yaml
+        uses: magefile/mage-action@v3
+        with:
+          args: build:plugins
         env:
           PLUGIN_DOWNLOAD_URL_BASE_PATH: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
-        run: |
-          make build-plugins
-          make gen-plugin-index
+
       - name: Release description
         env:
           PLUGIN_DOWNLOAD_URL_BASE_PATH: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
@@ -62,6 +63,6 @@ jobs:
         run: |
           gh release create "${GITHUB_REF#refs/tags/}" \
           --notes-file release.md \
-          ./dist/source_* \
-          ./dist/executor_* \
+          ./plugin-dist/source_* \
+          ./plugin-dist/executor_* \
           ./plugins-index.yaml
